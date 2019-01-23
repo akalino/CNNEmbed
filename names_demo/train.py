@@ -1,3 +1,4 @@
+import os
 import torch.nn as nn
 
 from model import CharRNN
@@ -17,7 +18,7 @@ def train(_model, _x_tensor, _y_tensor, _target):
     for i in range(_x_tensor.size()[0]):
         out, hidden = _model(_x_tensor[i], hidden)
 
-    _loss = _target(output, _y_tensor)
+    _loss = _target(out, _y_tensor)
     _loss.backward()
 
     for p in _model.parameters():
@@ -27,6 +28,7 @@ def train(_model, _x_tensor, _y_tensor, _target):
 
 
 if __name__ == "__main__":
+    os.environ['CUDA_VISIBLE_DEVICES'] = '0'
     alphabet = generate_alphabet()
     category_lines, all_categories = load_data(PATH)
     model = CharRNN(len(alphabet), HIDDEN_SIZE, len(all_categories))
@@ -39,6 +41,7 @@ if __name__ == "__main__":
         output, loss = train(model, x_tensor, y_tensor, criterion)
         total_loss += loss
         if j % tracking == 0:
+            print('On iteration: {i}', format(i=j))
             print('Average Loss is {s}'.format(s=float(total_loss)/j))
             pred_class = map_output_categories(output, all_categories)
             print('Last prediction was {p} while actual class was {a}'.format(p=pred_class,

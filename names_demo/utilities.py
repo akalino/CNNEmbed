@@ -16,7 +16,7 @@ def generate_alphabet():
 
 
 def uni_to_ascii(_s, _alphabet):
-    _o = ''.join(c for c in unicodedata.normalize('NDF', _s)
+    _o = ''.join(c for c in unicodedata.normalize('NFD', _s)
                  if unicodedata.category(c) != 'Mn'
                  and c in _alphabet)
     return _o
@@ -24,7 +24,8 @@ def uni_to_ascii(_s, _alphabet):
 
 def read_and_convert(_fn):
     lines = open(_fn, encoding='utf-8').read().strip().split('\n')
-    return [uni_to_ascii(line) for line in lines]
+    alphabet = generate_alphabet()
+    return [uni_to_ascii(line, alphabet) for line in lines]
 
 
 def load_data(_path):
@@ -53,7 +54,7 @@ def string_to_tensor(_lines, _alphabet):
     # TODO: replace with URL to tensor
     t = torch.zeros(len(_lines), 1, len(_alphabet))
     for line,  char in enumerate(_lines):
-        t[line][0][char_to_idx(char)] = 1
+        t[line][0][char_to_idx(char, _alphabet)] = 1
     return t
 
 
@@ -69,8 +70,13 @@ def random_choice(_list):
 
 def random_example(_lines, _categories):
     # TODO: this is going to go one at a time, better to mini-batch
+    alphabet = generate_alphabet()
     rand_cat = random_choice(_categories)
     line = random_choice(_lines[rand_cat])
     cat_tensor = torch.tensor([_categories.index(rand_cat)], dtype=torch.long)
-    line_tensor = string_to_tensor(line)
+    line_tensor = string_to_tensor(line, alphabet)
     return line_tensor, cat_tensor, rand_cat
+
+
+def precompute_batch():
+    pass
