@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+
+bin/
+build/
+dist/
+lib/
+lib64/
