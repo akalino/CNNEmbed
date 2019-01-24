@@ -6,6 +6,31 @@ import string
 import torch
 import unicodedata
 
+from torch.utils.data import Dataset, DataLoader
+
+
+class CharTensorData(Dataset):
+    def __init__(self, _path):
+        self.df = load_data_pandas(_path)
+        self.alphabet = generate_web_alphabet()
+        self.df['char_tensor'] = self.df.url.apply(lambda x: self.tensor_rep(x))
+        self.df.labels = pd.Categorical(self.df.labels)
+        self.df['class_label'] = self.df.labels.cat.codes
+
+    def __len__(self):
+        return self.df.shape[0]
+
+    def __getitem__(self, _idx):
+        x = self.df.char_tensor[_idx]
+        y = self.df.class_label[_idx]
+        return x, y
+
+    def tensor_rep(self, _s):
+        t = torch.zeros(1, len(self.alphabet))
+        for _char in _s:
+            t[char_to_idx(_char, self.alphabet)] = 1  # _s.count(_char)
+        return t
+
 
 def find_files(_path):
     return glob.glob(_path)
@@ -118,3 +143,4 @@ def cheat_batching(_lines, _categories, _batch_size):
         yes.append(ct)
     x_batch = torch.stack(xes)
     y_batch = torch.stack(yes)
+    return None
