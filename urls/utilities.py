@@ -111,17 +111,32 @@ class PaddedCharSeqData(Dataset):
 def train_valid_split(_ds, split_fold=10, random_seed=None):
     if random_seed is not None:
         np.random.seed(random_seed)
-
     data_len = len(_ds)
     indices = list(range(data_len))
     valid_size = split_fold
-    # valid_size = data_len//split_fold
     np.random.shuffle(indices)
     train_mapping = indices[valid_size:]
     valid_mapping = indices[:valid_size]
     train = GenHelper(_ds, data_len - valid_size, train_mapping)
     valid = GenHelper(_ds, valid_size, valid_mapping)
     return train, valid
+
+
+def train_valid_test_split(_ds, split_fold=10, random_seed=None):
+    if random_seed is not None:
+        np.random.seed(random_seed)
+    data_len = len(_ds)
+    indices = list(range(data_len))
+    valid_size = split_fold
+    test_size = split_fold
+    np.random.shuffle(indices)
+    train_mapping = indices[test_size + valid_size:]
+    valid_mapping = indices[test_size:test_size+valid_size]
+    test_mapping = indices[:test_size]
+    train = GenHelper(_ds, data_len - valid_size - test_size, train_mapping)
+    valid = GenHelper(_ds, valid_size, valid_mapping)
+    test = GenHelper(_ds, test_size, test_mapping)
+    return train, valid, test
 
 
 def find_files(_path):
