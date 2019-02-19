@@ -132,7 +132,7 @@ class CyclicLR(object):
             param_group['lr'] = lr
 
     @staticmethod
-    def _triangular_scale_fn(self, x):
+    def _triangular_scale_fn(self):
         return 1.
 
     @staticmethod

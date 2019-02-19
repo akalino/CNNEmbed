@@ -1,4 +1,5 @@
 import glob
+import numpy as np
 import os
 import pandas as pd
 import random
@@ -9,13 +10,27 @@ import unicodedata
 from torch.utils.data import Dataset, DataLoader
 
 
+class GenHelper(Dataset):
+    def __init__(self, mother, length, mapping):
+        self.mapping = mapping
+        self.length = length
+        self.mother = mother
+
+    def __getitem__(self, index):
+        return self.mother[self.mapping[index]]
+
+    def __len__(self):
+        return self.length
+
+
 class CharTensorData(Dataset):
     def __init__(self, _path):
         self.df = load_data_pandas(_path)
+        self.df = self.df.reindex(np.random.permutation(self.df.index)).reset_index(drop=True)
         self.alphabet = generate_web_alphabet()
         self.df['char_tensor'] = self.df.url.apply(lambda x: self.tensor_rep(x))
-        self.df.labels = pd.Categorical(self.df.labels)
-        self.df['class_label'] = self.df.labels.cat.codes
+        self.df.label = pd.Categorical(self.df.label)
+        self.df['class_label'] = self.df.label.cat.codes
 
     def __len__(self):
         return self.df.shape[0]
@@ -26,10 +41,87 @@ class CharTensorData(Dataset):
         return x, y
 
     def tensor_rep(self, _s):
-        t = torch.zeros(1, len(self.alphabet))
+        t = torch.zeros(len(self.alphabet))
         for _char in _s:
             t[char_to_idx(_char, self.alphabet)] = 1  # _s.count(_char)
         return t
+
+    def count_classes(self):
+        return len(set(self.df.class_label))
+
+
+class CharSeqData(Dataset):
+    def __init__(self, _path, _max_seq):
+        self.df = load_data_pandas(_path)
+        self.df = self.df.reindex(np.random.permutation(self.df.index)).reset_index(drop=True)
+        self.alphabet = generate_web_alphabet()
+        self.max_sequence_length = _max_seq
+        self.df['seq_rep'] = self.df.url.apply(lambda x: self.sequence_rep(x))
+        self.df.label = pd.Categorical(self.df.label)
+        self.df['class_label'] = self.df.label.cat.codes
+
+    def __len__(self):
+        return self.df.shape[0]
+
+    def __getitem__(self, _idx):
+        x = self.df.seq_rep[_idx]
+        y = self.df.class_label[_idx]
+        return x, y
+
+    def count_classes(self):
+        return len(set(self.df.class_label))
+
+    def sequence_rep(self, _s):
+        t = torch.zeros(len(self.alphabet), self.max_sequence_length)
+        for index_char, char in enumerate(_s[:self.max_sequence_length]):
+            if char_to_idx(char, self.alphabet) != -1:
+                t[char_to_idx(char, self.alphabet)][index_char] = 1.0
+        return t
+
+
+class PaddedCharSeqData(Dataset):
+    def __init__(self, _path, _max_seq):
+        self.df = load_data_pandas(_path)
+        self.df = self.df.reindex(np.random.permutation(self.df.index)).reset_index(drop=True)
+        self.alphabet = ['_PAD'] + list(generate_web_alphabet())
+        self.max_sequence_length = _max_seq
+        self.df['seq_rep'] = self.df.url.apply(lambda x: self.sequence_rep(x))
+        self.df.label = pd.Categorical(self.df.label)
+        self.df['class_label'] = self.df.label.cat.codes
+
+    def __len__(self):
+        return self.df.shape[0]
+
+    def __getitem__(self, _idx):
+        x = self.df.seq_rep[_idx]
+        y = self.df.class_label[_idx]
+        return x, y
+
+    def count_classes(self):
+        return len(set(self.df.class_label))
+
+    def sequence_rep(self, _s):
+        t = torch.zeros(len(self.alphabet), self.max_sequence_length)
+        for index_char, char in enumerate(_s[:self.max_sequence_length]):
+            if char_idx(char, self.alphabet) != -1:
+                t[char_idx(char, self.alphabet)][index_char] = 1.0
+        return t
+
+
+def train_valid_split(_ds, split_fold=10, random_seed=None):
+    if random_seed is not None:
+        np.random.seed(random_seed)
+
+    data_len = len(_ds)
+    indices = list(range(data_len))
+    valid_size = split_fold
+    # valid_size = data_len//split_fold
+    np.random.shuffle(indices)
+    train_mapping = indices[valid_size:]
+    valid_mapping = indices[:valid_size]
+    train = GenHelper(_ds, data_len - valid_size, train_mapping)
+    valid = GenHelper(_ds, valid_size, valid_mapping)
+    return train, valid
 
 
 def find_files(_path):
@@ -72,6 +164,13 @@ def load_data(_path):
     return cat_lines, all_categories
 
 
+def shuffle(df, n=1, axis=0):
+    df = df.copy()
+    for _ in range(n):
+        df.apply(np.random.shuffle, axis=axis)
+    return df
+
+
 def load_data_pandas(_path):
     df_list = []
     for filename in find_files(_path):
@@ -82,11 +181,16 @@ def load_data_pandas(_path):
         df_list.append(cur_df)
     out_df = pd.concat(df_list).reset_index(drop=True)
     out_df['id'] = out_df.index
+    shuf_df = out_df.reindex(np.random.permutation(out_df.index))
     return out_df
 
 
 def char_to_idx(_char, _alphabet):
     return _alphabet.find(_char)
+
+
+def char_idx(_char, _alphabet):
+    return _alphabet.index(_char)
 
 
 def char_to_tensor(_char, _alphabet):
