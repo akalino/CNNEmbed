@@ -1,5 +1,6 @@
 import glob
 import numpy as np
+np.random.seed(17)
 import os
 import pandas as pd
 import random
@@ -122,9 +123,7 @@ def train_valid_split(_ds, split_fold=10, random_seed=None):
     return train, valid
 
 
-def train_valid_test_split(_ds, split_fold=10, random_seed=None):
-    if random_seed is not None:
-        np.random.seed(random_seed)
+def train_valid_test_split(_ds, split_fold=10):
     data_len = len(_ds)
     indices = list(range(data_len))
     valid_size = split_fold

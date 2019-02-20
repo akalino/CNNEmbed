@@ -1,25 +1,27 @@
 import os
 import torch
 import torch.nn as nn
+torch.manual_seed(17)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
 
 from models.CharConv import CharConv
 from models.CLR import CyclicLR
 from models.Stopper import EarlyStopping
-from numpy.random import seed
 from sklearn.metrics import accuracy_score, f1_score
 from torch.autograd import Variable
 from utilities import *
 
 
 HIDDEN_SIZE = 512
-BATCH_SIZE = 16
-MAX_SEQUENCE = 512
-LINEAR_SIZE = 1024
-LEARNING_RATE = 1e-2
-REG_PARAM = 1e-4
+BATCH_SIZE = 32
+MAX_SEQUENCE = 256
+LINEAR_SIZE = 2048
+LEARNING_RATE = 0.005
+REG_PARAM = 1e-2
 MOMENTUM = 0.8
 EPOCHS = 5001
-RANDOM_SEED = seed(17)
+RANDOM_SEED = 17
 PATH = 'data/source/*.txt'
 USE_CUDA = torch.cuda.is_available()
 
@@ -50,7 +52,7 @@ if __name__ == "__main__":
     os.environ['CUDA_VISIBLE_DEVICES'] = '0'
     device = torch.device("cuda:0" if USE_CUDA else "cpu")
     df = PaddedCharSeqData(PATH, MAX_SEQUENCE)
-    train, valid, test = train_valid_test_split(df, split_fold=BATCH_SIZE*8, random_seed=RANDOM_SEED)
+    train, valid, test = train_valid_test_split(df, split_fold=BATCH_SIZE*4)
     print('Training set has {m} entries'.format(m=len(train)))
     print('Validation set has {n} entries'.format(n=len(valid)))
     print('Test set has {t} entries'.format(t=len(test)))
@@ -60,13 +62,13 @@ if __name__ == "__main__":
     model = CharConv(len(df.alphabet), df.count_classes(), HIDDEN_SIZE, BATCH_SIZE, MAX_SEQUENCE, LINEAR_SIZE).cuda()
     criterion = nn.NLLLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=REG_PARAM)  # , momentum=MOMENTUM)
-    scheduler = CyclicLR(optimizer)
-    stopper = EarlyStopping(patience=100, verbose=False, saver=False)
+    # scheduler = CyclicLR(optimizer)
+    stopper = EarlyStopping(patience=10, verbose=False, saver=False)
     for epoch in range(EPOCHS):
         el = 0
         model.train()
         for batch in train_batched:
-            scheduler.batch_step()
+            # scheduler.batch_step()
             x = Variable(batch[0].cuda(),  requires_grad=True)
             y = Variable(batch[1].cuda())
             preds, loss = train_batch(model, x, y, criterion)
@@ -96,5 +98,5 @@ if __name__ == "__main__":
                 acc, f1 = evaluate(model, x_test, y_test)
                 print('Test set accuracy of {a} and F1 of {f}'.format(a=acc, f=f1))
         print('Epoch {e} had loss {ls}'.format(e=epoch, ls=el))
-        lr_list = scheduler.get_lr()
-    print('Final learning rate was {x}'.format(x=lr_list[-1]))
+        # lr_list = scheduler.get_lr()
+    # print('Final learning rate was {x}'.format(x=lr_list[-1]))
