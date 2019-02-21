@@ -1,6 +1,6 @@
 import glob
 import numpy as np
-np.random.seed(17)
+np.random.seed(1)
 import os
 import pandas as pd
 import random

@@ -1,7 +1,7 @@
 import os
 import torch
 import torch.nn as nn
-torch.manual_seed(17)
+torch.manual_seed(1)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
@@ -21,7 +21,6 @@ LEARNING_RATE = 0.005
 REG_PARAM = 1e-2
 MOMENTUM = 0.8
 EPOCHS = 5001
-RANDOM_SEED = 17
 PATH = 'data/source/*.txt'
 USE_CUDA = torch.cuda.is_available()
 

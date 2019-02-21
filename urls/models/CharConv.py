@@ -37,8 +37,10 @@ class CharConv(nn.Module):
         # Fully Connected Outputs
         input_hidden_size = (self.max_sequence - 96) // 27 * self.hidden_size
         self.fc1 = torch.nn.Linear(input_hidden_size, self.linear_size)
+        self.fc1_bn = torch.nn.BatchNorm1d(self.linear_size)
         self.drop1 = nn.Dropout(0.5)
         self.fc2 = torch.nn.Linear(self.linear_size, self.linear_size)
+        self.fc2_bn = torch.nn.BatchNorm1d(self.linear_size)
         self.softmax = nn.LogSoftmax(dim=1)
 
     def forward(self, _input):
@@ -62,7 +64,9 @@ class CharConv(nn.Module):
         rout_1 = self.relu3(pout_1)
         fc_out = rout_1.view(rout_1.size(0), -1)
         full_1 = self.fc1(fc_out)
-        drop_1 = self.drop1(full_1)
+        full_1_bn = self.fc1_bn(full_1)
+        drop_1 = self.drop1(full_1_bn)
         full_2 = self.fc2(drop_1)
-        out_soft = self.softmax(full_2)
+        full_2_bn = self.fc2_bn(full_2)
+        out_soft = self.softmax(full_2_bn)
         return out_soft
